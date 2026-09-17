@@ -163,13 +163,92 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- 4. 헬퍼 시작 / 화면 캡처 권한 요청 -->
+        <!-- 4. 헬퍼 자동화 설정 -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardBackgroundColor="@color/surface"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="0dp"
+            app:strokeColor="#5503DAC5"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="4. 자동화 옵션 설정"
+                    android:textColor="@color/accent"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <!-- 목표 층수 입력 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="목표 환생 층수:"
+                        android:textColor="@color/text_primary"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <EditText
+                        android:id="@+id/etMainTargetStage"
+                        android:layout_width="match_parent"
+                        android:layout_height="44dp"
+                        android:layout_marginStart="10dp"
+                        android:background="#333333"
+                        android:hint="예: 15000"
+                        android:inputType="number"
+                        android:paddingHorizontal="12dp"
+                        android:textColor="@color/text_primary"
+                        android:textColorHint="#777777"
+                        android:textSize="15sp" />
+                </LinearLayout>
+
+                <!-- 시작 시 스킬 즉시 세팅 체크박스 -->
+                <CheckBox
+                    android:id="@+id/cbMainRunSkillSetupOnStart"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:checked="true"
+                    android:text="헬퍼 시작 시 [소드마스터 렙업 &amp; 6대 스킬 1렙 해금 &amp; 활성화] 즉시 실행"
+                    android:textColor="@color/text_primary"
+                    android:textSize="13sp" />
+
+                <!-- 등반 중 스킬 주기적 재시전 체크박스 -->
+                <CheckBox
+                    android:id="@+id/cbMainAutoRecastSkills"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:checked="true"
+                    android:text="등반 중 6대 스킬 주기적 재활성화 (쿨타임마다 발동)"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- 5. 헬퍼 시작 / 화면 캡처 권한 요청 -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnStartHelper"
             android:layout_width="match_parent"
             android:layout_height="56dp"
-            android:layout_marginTop="16dp"
-            android:text="헬퍼 플로팅 위젯 실행 (화면 캡처 시작)"
+            android:layout_marginBottom="24dp"
+            android:text="TT2 자동화 헬퍼 시작 (화면 캡처 실행)"
             android:textSize="16sp"
             android:textStyle="bold"
             app:cornerRadius="14dp" />

@@ -49,7 +49,15 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         setupListeners()
+        loadConfigValues()
         requestNotificationPermissionIfNeeded()
+    }
+
+    private fun loadConfigValues() {
+        val config = HelperConfig.getInstance(this)
+        binding.etMainTargetStage.setText(config.targetStage.toString())
+        binding.cbMainRunSkillSetupOnStart.isChecked = config.runSkillSetupOnStart
+        binding.cbMainAutoRecastSkills.isChecked = config.autoRecastSkills
     }
 
     override fun onResume() {
@@ -133,12 +141,21 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startHelperService(resultCode: Int, resultData: Intent) {
+        val config = HelperConfig.getInstance(this)
+        val stageInput = binding.etMainTargetStage.text.toString().trim().toIntOrNull()
+        if (stageInput != null && stageInput > 0) {
+            config.targetStage = stageInput
+        }
+        config.runSkillSetupOnStart = binding.cbMainRunSkillSetupOnStart.isChecked
+        config.autoRecastSkills = binding.cbMainAutoRecastSkills.isChecked
+
         val serviceIntent = Intent(this, TtForegroundService::class.java).apply {
             putExtra(TtForegroundService.EXTRA_RESULT_CODE, resultCode)
             putExtra(TtForegroundService.EXTRA_RESULT_DATA, resultData)
+            putExtra(TtForegroundService.EXTRA_AUTO_START, true)
         }
         ContextCompat.startForegroundService(this, serviceIntent)
-        Toast.makeText(this, "TT2 헬퍼가 시작되었습니다. 게임을 켜주세요!", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "TT2 헬퍼가 자동 시작되었습니다. 게임을 켜주세요!", Toast.LENGTH_SHORT).show()
         
         // 홈 화면 또는 게임으로 바로 전환할 수 있도록 액티비티 최소화
         moveTaskToBack(true)
