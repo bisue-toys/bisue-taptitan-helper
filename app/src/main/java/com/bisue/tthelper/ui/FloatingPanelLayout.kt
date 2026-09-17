@@ -66,16 +66,19 @@ class FloatingPanelLayout(
             saveTargetStage()
             val willRun = !config.isAutomationRunning
             updateRunButtonState(willRun)
+            android.widget.Toast.makeText(context, if (willRun) "자동화 루프를 시작합니다." else "자동화를 일시 정지했습니다.", android.widget.Toast.LENGTH_SHORT).show()
             onToggleAutomation(willRun)
         }
 
         btnSkillSetupNow.setOnClickListener {
             saveTargetStage()
+            android.widget.Toast.makeText(context, "스킬 1렙 해금 및 활성화를 시작합니다.", android.widget.Toast.LENGTH_SHORT).show()
             onSkillSetupClicked()
         }
 
         btnManualTest.setOnClickListener {
             saveTargetStage()
+            android.widget.Toast.makeText(context, "환생 및 전체 사이클 테스트를 시작합니다.", android.widget.Toast.LENGTH_SHORT).show()
             onManualTestClicked()
         }
 

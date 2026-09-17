@@ -93,7 +93,7 @@ class InfiniteCycleFsm(
     fun triggerSkillSetupNow() {
         scope.launch {
             Log.i(TAG, "사용자 수동 요청: 스킬 1렙 해금 및 활성화 즉시 실행")
-            executeSkillSetupAndActivationOnly()
+            executeSkillSetupAndActivationOnly(force = true)
         }
     }
 
@@ -103,7 +103,7 @@ class InfiniteCycleFsm(
     fun triggerManualLoop() {
         scope.launch {
             Log.i(TAG, "사용자 수동 요청: 환생 & 전체 사이클 테스트 즉시 실행")
-            executeFullPrestigeAndSetupCycle()
+            executeFullPrestigeAndSetupCycle(force = true)
         }
     }
 
@@ -166,10 +166,13 @@ class InfiniteCycleFsm(
     /**
      * 탭(소드마스터) 레벨업 ➔ 스킬 1레벨 해금 ➔ 스킬 전체 활성화
      */
-    suspend fun executeSkillSetupAndActivationOnly() {
-        if (!TtAccessibilityService.isGameInForeground) {
+    suspend fun executeSkillSetupAndActivationOnly(force: Boolean = false) {
+        if (!force && !TtAccessibilityService.isGameInForeground) {
             Log.w(TAG, "스킬 세팅 보류: 게임이 포그라운드에 있지 않음")
             return
+        }
+        if (force) {
+            TtAccessibilityService.isGameInForeground = true
         }
 
         // ==========================================
@@ -225,7 +228,14 @@ class InfiniteCycleFsm(
     /**
      * 환생 -> 탭 레벨업 -> 스킬 해금(1렙) -> 스킬 활성화 전체 사이클 수행
      */
-    private suspend fun executeFullPrestigeAndSetupCycle() {
+    private suspend fun executeFullPrestigeAndSetupCycle(force: Boolean = false) {
+        if (!force && !TtAccessibilityService.isGameInForeground) {
+            Log.w(TAG, "환생 사이클 보류: 게임이 포그라운드에 있지 않음")
+            return
+        }
+        if (force) {
+            TtAccessibilityService.isGameInForeground = true
+        }
         // ==========================================
         // 1단계: 환생 (Prestige)
         // ==========================================

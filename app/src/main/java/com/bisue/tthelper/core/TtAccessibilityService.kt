@@ -21,19 +21,37 @@ class TtAccessibilityService : AccessibilityService() {
         // 포그라운드 활성 창 변경 이벤트 감지
         if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
             val pkg = event.packageName?.toString() ?: return
-            
-            // 시스템 UI나 헬퍼 오버레이 자체는 무시
-            if (pkg == packageName || pkg == "com.android.systemui") {
+
+            // 1. TT2 게임이면 즉시 게임 포그라운드로 인정
+            if (pkg == HelperConfig.TT2_PACKAGE_NAME) {
+                if (!isGameInForeground) {
+                    isGameInForeground = true
+                    Log.i(TAG, "게임 포그라운드 진입 확인: $pkg")
+                }
                 return
             }
 
-            val wasInGame = isGameInForeground
-            isGameInForeground = (pkg == HelperConfig.TT2_PACKAGE_NAME)
+            // 2. 시스템 UI, 삼성 게임 부스터/도구, 키보드 등 보조/일시적 창은 무시 (이전 상태 유지)
+            if (isTransientOrSystemPackage(pkg)) {
+                return
+            }
 
-            if (wasInGame != isGameInForeground) {
-                Log.d(TAG, "게임 포그라운드 상태 변경: $isGameInForeground (현재 패키지: $pkg)")
+            // 3. 사용자가 완전히 다른 일반 앱(홈런처, 유튜브, 웹브라우저 등)으로 전환한 경우
+            if (isGameInForeground) {
+                isGameInForeground = false
+                Log.d(TAG, "게임 포그라운드 이탈 감지 (현재 앱: $pkg)")
             }
         }
+    }
+
+    private fun isTransientOrSystemPackage(pkg: String): Boolean {
+        return pkg == packageName ||
+                pkg == "android" ||
+                pkg == "com.android.systemui" ||
+                pkg.startsWith("com.samsung.android.game") || // Game Booster, Game Tools, GOS
+                pkg.startsWith("com.samsung.android.honeyboard") || // 삼성 키보드
+                pkg.contains("inputmethod") ||
+                pkg.contains("ime")
     }
 
     override fun onInterrupt() {
@@ -64,6 +82,6 @@ class TtAccessibilityService : AccessibilityService() {
 
         @Volatile
         var isGameInForeground: Boolean = true
-            private set
+            internal set
     }
 }
