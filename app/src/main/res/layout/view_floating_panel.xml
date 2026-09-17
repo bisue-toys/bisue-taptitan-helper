@@ -145,13 +145,23 @@
             android:textStyle="bold" />
 
         <Button
+            android:id="@+id/btnSkillSetupNow"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:layout_marginTop="6dp"
+            android:text="지금 즉시 스킬 1렙 해금 &amp; 활성화"
+            android:textColor="@color/accent"
+            android:textSize="12sp" />
+
+        <Button
             android:id="@+id/btnManualTestLoop"
             style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="match_parent"
             android:layout_height="40dp"
             android:layout_marginTop="6dp"
-            android:text="환생 &amp; 스킬 루프 즉시 테스트"
-            android:textColor="@color/accent"
+            android:text="환생 &amp; 전체 루프 즉시 테스트"
+            android:textColor="@color/text_secondary"
             android:textSize="12sp" />
     </LinearLayout>
 

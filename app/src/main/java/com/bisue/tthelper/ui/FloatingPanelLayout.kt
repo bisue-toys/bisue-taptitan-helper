@@ -22,6 +22,7 @@ class FloatingPanelLayout(
     private val context: Context,
     private val config: HelperConfig,
     private val onToggleAutomation: (Boolean) -> Unit,
+    private val onSkillSetupClicked: () -> Unit,
     private val onManualTestClicked: () -> Unit,
     private val onCloseClicked: () -> Unit
 ) {
@@ -33,6 +34,7 @@ class FloatingPanelLayout(
     private val etTargetStage: EditText = view.findViewById(R.id.etTargetStage)
     private val cbAutoRecast: CheckBox = view.findViewById(R.id.cbAutoRecastSkills)
     private val btnToggle: Button = view.findViewById(R.id.btnToggleAutomation)
+    private val btnSkillSetupNow: Button = view.findViewById(R.id.btnSkillSetupNow)
     private val btnManualTest: Button = view.findViewById(R.id.btnManualTestLoop)
     private val btnClose: ImageButton = view.findViewById(R.id.btnPanelClose)
 
@@ -64,6 +66,11 @@ class FloatingPanelLayout(
             val willRun = !config.isAutomationRunning
             updateRunButtonState(willRun)
             onToggleAutomation(willRun)
+        }
+
+        btnSkillSetupNow.setOnClickListener {
+            saveTargetStage()
+            onSkillSetupClicked()
         }
 
         btnManualTest.setOnClickListener {

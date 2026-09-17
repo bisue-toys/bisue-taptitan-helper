@@ -42,14 +42,29 @@ class InfiniteCycleFsm(
 
     private var lastRecastTimestamp: Long = 0L
 
-    fun start() {
+    fun start(runInitialSkillSetup: Boolean = config.runSkillSetupOnStart) {
         if (loopJob?.isActive == true) return
         config.isAutomationRunning = true
-        currentState = FsmState.MONITORING_STAGE
         stageParser.resetHysteresis()
 
         loopJob = scope.launch {
-            Log.i(TAG, "무한 자동화 FSM 루프 시작 (목표 층수: ${config.targetStage})")
+            Log.i(TAG, "무한 자동화 FSM 루프 시작 (목표 층수: ${config.targetStage}, 시작시 스킬세팅=$runInitialSkillSetup)")
+
+            if (runInitialSkillSetup) {
+                // 게임 화면이 전면에 뜰 때까지 최대 8초 대기
+                var waitCount = 0
+                while (isActive && !TtAccessibilityService.isGameInForeground && waitCount < 8) {
+                    delay(1000)
+                    waitCount++
+                }
+                if (isActive && config.isAutomationRunning) {
+                    Log.i(TAG, "시작 시 스킬 해금 및 활성화 시퀀스 즉시 실행")
+                    executeSkillSetupAndActivationOnly()
+                }
+            } else {
+                currentState = FsmState.MONITORING_STAGE
+            }
+
             while (isActive && config.isAutomationRunning) {
                 try {
                     step()
@@ -73,11 +88,21 @@ class InfiniteCycleFsm(
     }
 
     /**
-     * 사용자가 플로팅 창에서 '즉시 환생 & 세팅 루프'를 수동 테스트할 수 있는 기능
+     * 사용자가 플로팅 패널에서 '지금 즉시 스킬 1렙 해금 & 활성화'를 수동 트리거
+     */
+    fun triggerSkillSetupNow() {
+        scope.launch {
+            Log.i(TAG, "사용자 수동 요청: 스킬 1렙 해금 및 활성화 즉시 실행")
+            executeSkillSetupAndActivationOnly()
+        }
+    }
+
+    /**
+     * 사용자가 플로팅 패널에서 '환생 & 전체 루프 즉시 테스트'를 수동 트리거
      */
     fun triggerManualLoop() {
         scope.launch {
-            Log.i(TAG, "수동 환생 & 스킬 세팅 루프 즉시 테스트 트리거")
+            Log.i(TAG, "사용자 수동 요청: 환생 & 전체 사이클 테스트 즉시 실행")
             executeFullPrestigeAndSetupCycle()
         }
     }
@@ -121,6 +146,10 @@ class InfiniteCycleFsm(
         val text = ocrEngine.recognizeText(enhancedBitmap)
         enhancedBitmap.recycle()
 
+        if (text.isNotBlank()) {
+            Log.d(TAG, "OCR 인식 텍스트: '$text'")
+        }
+
         val result = stageParser.evaluate(text, config.targetStage, requiredConsecutiveHits = 2)
         result.parsedStage?.let { stage ->
             config.currentDetectedStage = stage
@@ -132,6 +161,65 @@ class InfiniteCycleFsm(
             Log.i(TAG, "목표 층수(${config.targetStage}) 달성 확인! 환생 시퀀스 개시")
             executeFullPrestigeAndSetupCycle()
         }
+    }
+
+    /**
+     * 탭(소드마스터) 레벨업 ➔ 스킬 1레벨 해금 ➔ 스킬 전체 활성화
+     */
+    suspend fun executeSkillSetupAndActivationOnly() {
+        if (!TtAccessibilityService.isGameInForeground) {
+            Log.w(TAG, "스킬 세팅 보류: 게임이 포그라운드에 있지 않음")
+            return
+        }
+
+        // ==========================================
+        // 2단계: 탭(소드마스터) 레벨업
+        // ==========================================
+        currentState = FsmState.SWORDMASTER_PREPARE_MAX
+        touchEngine.tapRelative(CoordinateProfile.TAB_SWORDMASTER, postDelayMs = 600)
+        // 레벨업 단위를 MAX 모드로 세팅 (토글 1회)
+        touchEngine.tapRelative(CoordinateProfile.BTN_LEVELUP_MULTIPLIER, postDelayMs = 400)
+
+        currentState = FsmState.SWORDMASTER_UPGRADE_TAP
+        // 소드마스터 업그레이드 5연타 (Lv 600 이상 확보)
+        touchEngine.multiTapRelative(CoordinateProfile.BTN_SWORDMASTER_UPGRADE, times = 5, intervalMs = 150)
+        delay(400)
+
+        // ==========================================
+        // 3단계: 스킬 1레벨씩만 해금 (마나 절약 위해 x1로 전환)
+        // ==========================================
+        currentState = FsmState.SKILLS_SWITCH_X1
+        // 레벨업 단위를 'x1'로 복구 (토글 연속 클릭)
+        touchEngine.tapRelative(CoordinateProfile.BTN_LEVELUP_MULTIPLIER, postDelayMs = 350)
+        touchEngine.tapRelative(CoordinateProfile.BTN_LEVELUP_MULTIPLIER, postDelayMs = 350)
+        touchEngine.tapRelative(CoordinateProfile.BTN_LEVELUP_MULTIPLIER, postDelayMs = 400)
+
+        currentState = FsmState.SKILLS_UNLOCK_TOP_4
+        touchEngine.tapRelative(CoordinateProfile.BTN_SKILL_1_HEAVENLY, postDelayMs = 300)
+        touchEngine.tapRelative(CoordinateProfile.BTN_SKILL_2_DEADLY, postDelayMs = 300)
+        touchEngine.tapRelative(CoordinateProfile.BTN_SKILL_3_MIDAS, postDelayMs = 300)
+        touchEngine.tapRelative(CoordinateProfile.BTN_SKILL_4_FIRESWORD, postDelayMs = 400)
+
+        currentState = FsmState.SKILLS_SCROLL_DOWN
+        touchEngine.swipeRelative(CoordinateProfile.SCROLL_SKILL_START, CoordinateProfile.SCROLL_SKILL_END, postDelayMs = 500)
+
+        currentState = FsmState.SKILLS_UNLOCK_BOTTOM_2
+        touchEngine.tapRelative(CoordinateProfile.BTN_SKILL_5_WARCRY, postDelayMs = 300)
+        touchEngine.tapRelative(CoordinateProfile.BTN_SKILL_6_CLONE, postDelayMs = 500)
+
+        // ==========================================
+        // 4단계: 6대 액티브 스킬 전체 활성화
+        // ==========================================
+        currentState = FsmState.ACTIVATE_CLOSE_TAB
+        touchEngine.tapRelative(CoordinateProfile.CLOSE_TAB_TAP, postDelayMs = 500)
+
+        currentState = FsmState.ACTIVATE_ALL_SKILLS
+        activateAllActiveSkills()
+
+        lastRecastTimestamp = System.currentTimeMillis()
+        Log.i(TAG, "탭 레벨업 ➔ 스킬 1렙 해금 ➔ 스킬 활성화 완료! 층수 감시로 전환합니다.")
+
+        currentState = FsmState.MONITORING_STAGE
     }
 
     /**
@@ -160,55 +248,8 @@ class InfiniteCycleFsm(
         delay(12000) // 게임 화이트아웃 / 리셋 애니메이션 대기
         stageParser.resetHysteresis()
 
-        // ==========================================
-        // 2단계: 탭(소드마스터) 레벨업
-        // ==========================================
-        currentState = FsmState.SWORDMASTER_PREPARE_MAX
-        touchEngine.tapRelative(CoordinateProfile.TAB_SWORDMASTER, postDelayMs = 600)
-        // 레벨업 단위를 MAX 모드로 세팅 (필요 시 토글)
-        touchEngine.tapRelative(CoordinateProfile.BTN_LEVELUP_MULTIPLIER, postDelayMs = 400)
-
-        currentState = FsmState.SWORDMASTER_UPGRADE_TAP
-        // 소드마스터 업그레이드 연타 (Lv 600 이상 확보)
-        touchEngine.multiTapRelative(CoordinateProfile.BTN_SWORDMASTER_UPGRADE, times = 5, intervalMs = 150)
-        delay(400)
-
-        // ==========================================
-        // 3단계: 스킬 1레벨씩만 해금 (마나 절약)
-        // ==========================================
-        currentState = FsmState.SKILLS_SWITCH_X1
-        // 레벨업 단위를 'x1'로 복구 (연속 클릭하여 x1 맞춤)
-        touchEngine.tapRelative(CoordinateProfile.BTN_LEVELUP_MULTIPLIER, postDelayMs = 350)
-        touchEngine.tapRelative(CoordinateProfile.BTN_LEVELUP_MULTIPLIER, postDelayMs = 350)
-        touchEngine.tapRelative(CoordinateProfile.BTN_LEVELUP_MULTIPLIER, postDelayMs = 400)
-
-        currentState = FsmState.SKILLS_UNLOCK_TOP_4
-        touchEngine.tapRelative(CoordinateProfile.BTN_SKILL_1_HEAVENLY, postDelayMs = 300)
-        touchEngine.tapRelative(CoordinateProfile.BTN_SKILL_2_DEADLY, postDelayMs = 300)
-        touchEngine.tapRelative(CoordinateProfile.BTN_SKILL_3_MIDAS, postDelayMs = 300)
-        touchEngine.tapRelative(CoordinateProfile.BTN_SKILL_4_FIRESWORD, postDelayMs = 400)
-
-        currentState = FsmState.SKILLS_SCROLL_DOWN
-        touchEngine.swipeRelative(CoordinateProfile.SCROLL_SKILL_START, CoordinateProfile.SCROLL_SKILL_END, postDelayMs = 500)
-
-        currentState = FsmState.SKILLS_UNLOCK_BOTTOM_2
-        touchEngine.tapRelative(CoordinateProfile.BTN_SKILL_5_WARCRY, postDelayMs = 300)
-        touchEngine.tapRelative(CoordinateProfile.BTN_SKILL_6_CLONE, postDelayMs = 500)
-
-        // ==========================================
-        // 4단계: 6대 액티브 스킬 전체 활성화
-        // ==========================================
-        currentState = FsmState.ACTIVATE_CLOSE_TAB
-        touchEngine.tapRelative(CoordinateProfile.CLOSE_TAB_TAP, postDelayMs = 500)
-
-        currentState = FsmState.ACTIVATE_ALL_SKILLS
-        activateAllActiveSkills()
-
-        lastRecastTimestamp = System.currentTimeMillis()
-        Log.i(TAG, "환생 ➔ 탭 레벨업 ➔ 스킬 1렙 해금 ➔ 스킬 활성화 사이클 1회 완주!")
-
-        // 5단계: 다시 층수 감시 모드로 복귀하여 무한 반복
-        currentState = FsmState.MONITORING_STAGE
+        // 2~4단계: 소드마스터 렙업 & 스킬 해금 & 활성화
+        executeSkillSetupAndActivationOnly()
     }
 
     /**

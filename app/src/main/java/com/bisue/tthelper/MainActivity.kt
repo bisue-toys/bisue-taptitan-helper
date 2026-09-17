@@ -14,6 +14,7 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import com.bisue.tthelper.core.HelperConfig
 import com.bisue.tthelper.core.TtAccessibilityService
 import com.bisue.tthelper.core.TtForegroundService
 import com.bisue.tthelper.databinding.ActivityMainBinding

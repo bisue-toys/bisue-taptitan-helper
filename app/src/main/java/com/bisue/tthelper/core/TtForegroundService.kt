@@ -18,6 +18,7 @@ import android.view.WindowManager
 import androidx.core.app.NotificationCompat
 import com.bisue.tthelper.MainActivity
 import com.bisue.tthelper.R
+import com.bisue.tthelper.fsm.FsmState
 import com.bisue.tthelper.fsm.InfiniteCycleFsm
 import com.bisue.tthelper.touch.HumanTouchEngine
 import com.bisue.tthelper.ui.FloatingBubbleView
@@ -60,6 +61,7 @@ class TtForegroundService : Service() {
             @Suppress("DEPRECATION")
             intent?.getParcelableExtra(EXTRA_RESULT_DATA)
         }
+        val autoStart = intent?.getBooleanExtra(EXTRA_AUTO_START, false) ?: false
 
         if (resultCode != 0 && resultData != null && mediaProjection == null) {
             // Android 14+ 포그라운드 서비스 알림 활성화
@@ -68,7 +70,7 @@ class TtForegroundService : Service() {
             val mpManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
             mediaProjection = mpManager.getMediaProjection(resultCode, resultData)
 
-            initAutomationComponents()
+            initAutomationComponents(autoStart)
         }
 
         return START_STICKY
@@ -87,7 +89,7 @@ class TtForegroundService : Service() {
         }
     }
 
-    private fun initAutomationComponents() {
+    private fun initAutomationComponents(autoStart: Boolean) {
         val mp = mediaProjection ?: return
 
         // 화면 해상도 및 DPI 획득
@@ -117,11 +119,14 @@ class TtForegroundService : Service() {
             config = config,
             onToggleAutomation = { start ->
                 if (start) {
-                    fsm?.start()
+                    fsm?.start(config.runSkillSetupOnStart)
                 } else {
                     fsm?.stop()
                 }
                 floatingBubble?.updateStatusBadge(start)
+            },
+            onSkillSetupClicked = {
+                fsm?.triggerSkillSetupNow()
             },
             onManualTestClicked = {
                 fsm?.triggerManualLoop()
@@ -139,14 +144,28 @@ class TtForegroundService : Service() {
             ocrEngine = ocrEngine!!,
             onStateChanged = { state ->
                 floatingPanel?.updateState(state)
+                val badgeText = when (state) {
+                    FsmState.IDLE -> "OFF"
+                    FsmState.MONITORING_STAGE -> "RUN"
+                    FsmState.RECOVERY -> "ERR"
+                    else -> "ACT"
+                }
+                floatingBubble?.updateStatusBadge(state != FsmState.IDLE, badgeText)
                 updateNotification("상태: ${state.description}")
             },
             onStageDetected = { stage ->
                 floatingPanel?.updateDetectedStage(stage)
+                updateNotification("층수: ${String.format("%,d", stage)} / 목표: ${String.format("%,d", config.targetStage)}")
             }
         )
 
         floatingBubble?.show()
+
+        if (autoStart) {
+            Log.i(TAG, "자동 시작 플래그 확인 -> FSM 즉시 구동 (스킬 세팅: ${config.runSkillSetupOnStart})")
+            fsm?.start(config.runSkillSetupOnStart)
+            floatingBubble?.updateStatusBadge(true, "RUN")
+        }
     }
 
     private fun createNotificationChannel() {
@@ -214,5 +233,6 @@ class TtForegroundService : Service() {
         const val ACTION_STOP = "com.bisue.tthelper.action.STOP"
         const val EXTRA_RESULT_CODE = "extra_result_code"
         const val EXTRA_RESULT_DATA = "extra_result_data"
+        const val EXTRA_AUTO_START = "extra_auto_start"
     }
 }
