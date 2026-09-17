@@ -27,7 +27,8 @@ class FloatingPanelLayout(
     private val onCloseClicked: () -> Unit
 ) {
     private val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-    val view: View = LayoutInflater.from(context).inflate(R.layout.view_floating_panel, null)
+    private val themedContext = android.view.ContextThemeWrapper(context, R.style.Theme_TapTitanHelper)
+    val view: View = LayoutInflater.from(themedContext).inflate(R.layout.view_floating_panel, null)
 
     private val tvStatus: TextView = view.findViewById(R.id.tvCurrentStatus)
     private val tvDetectedStage: TextView = view.findViewById(R.id.tvDetectedStage)
@@ -36,7 +37,7 @@ class FloatingPanelLayout(
     private val btnToggle: Button = view.findViewById(R.id.btnToggleAutomation)
     private val btnSkillSetupNow: Button = view.findViewById(R.id.btnSkillSetupNow)
     private val btnManualTest: Button = view.findViewById(R.id.btnManualTestLoop)
-    private val btnClose: ImageButton = view.findViewById(R.id.btnPanelClose)
+    private val btnClose: View = view.findViewById(R.id.btnPanelClose)
 
     private val params = WindowManager.LayoutParams(
         WindowManager.LayoutParams.WRAP_CONTENT,

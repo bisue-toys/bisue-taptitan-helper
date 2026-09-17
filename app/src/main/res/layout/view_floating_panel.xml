@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="320dp"
     android:layout_height="wrap_content"
     android:background="@drawable/bg_card"
@@ -24,14 +23,15 @@
             android:textSize="17sp"
             android:textStyle="bold" />
 
-        <ImageButton
+        <ImageView
             android:id="@+id/btnPanelClose"
             android:layout_width="32dp"
             android:layout_height="32dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
+            android:clickable="true"
+            android:focusable="true"
             android:contentDescription="Close"
-            android:src="@android:drawable/ic_menu_close_clear_cancel"
-            app:tint="@color/text_secondary" />
+            android:padding="4dp"
+            android:src="@android:drawable/ic_menu_close_clear_cancel" />
     </LinearLayout>
 
     <View
@@ -139,27 +139,27 @@
             android:id="@+id/btnToggleAutomation"
             android:layout_width="match_parent"
             android:layout_height="44dp"
-            android:backgroundTint="@color/status_green"
+            android:background="@drawable/bg_button_primary"
             android:text="자동화 루프 시작"
             android:textColor="@color/text_primary"
             android:textStyle="bold" />
 
         <Button
             android:id="@+id/btnSkillSetupNow"
-            style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="match_parent"
             android:layout_height="40dp"
             android:layout_marginTop="6dp"
+            android:background="@drawable/bg_button_outline"
             android:text="지금 즉시 스킬 1렙 해금 &amp; 활성화"
             android:textColor="@color/accent"
             android:textSize="12sp" />
 
         <Button
             android:id="@+id/btnManualTestLoop"
-            style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="match_parent"
             android:layout_height="40dp"
             android:layout_marginTop="6dp"
+            android:background="@drawable/bg_button_outline"
             android:text="환생 &amp; 전체 루프 즉시 테스트"
             android:textColor="@color/text_secondary"
             android:textSize="12sp" />

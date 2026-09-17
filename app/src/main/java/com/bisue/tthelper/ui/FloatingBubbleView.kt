@@ -21,7 +21,8 @@ class FloatingBubbleView(
     private val onBubbleClicked: () -> Unit
 ) {
     private val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-    val view: View = LayoutInflater.from(context).inflate(R.layout.view_floating_bubble, null)
+    private val themedContext = android.view.ContextThemeWrapper(context, R.style.Theme_TapTitanHelper)
+    val view: View = LayoutInflater.from(themedContext).inflate(R.layout.view_floating_bubble, null)
     private val tvBadge: TextView = view.findViewById(R.id.tvBubbleBadge)
 
     private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop.coerceAtLeast(40)

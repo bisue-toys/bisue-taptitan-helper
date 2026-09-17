@@ -158,7 +158,9 @@ class MainActivity : AppCompatActivity() {
         ContextCompat.startForegroundService(this, serviceIntent)
         Toast.makeText(this, "TT2 헬퍼가 자동 시작되었습니다. 게임을 켜주세요!", Toast.LENGTH_SHORT).show()
         
-        // 홈 화면 또는 게임으로 바로 전환할 수 있도록 액티비티 최소화
-        moveTaskToBack(true)
+        // 서비스가 포그라운드로 승격된 후 홈 화면 또는 게임으로 매끄럽게 전환되도록 지연 최소화
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            moveTaskToBack(true)
+        }, 500)
     }
 }
