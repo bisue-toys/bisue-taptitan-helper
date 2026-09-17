@@ -24,7 +24,7 @@ class HumanTouchEngine(
      * 특정 상대 좌표를 인간다운 오차를 더해 탭
      */
     suspend fun tapRelative(
-        point: PointF,
+        point: RelativePoint,
         jitterPx: Float = 12f,
         postDelayMs: Long = 200L
     ): Boolean {
@@ -51,7 +51,7 @@ class HumanTouchEngine(
      * 연속 n회 연타 (예: 소드마스터 레벨업 버튼)
      */
     suspend fun multiTapRelative(
-        point: PointF,
+        point: RelativePoint,
         times: Int,
         intervalMs: Long = 120L
     ) {
@@ -64,8 +64,8 @@ class HumanTouchEngine(
      * 부드러운 스크롤/스와이프 제스처
      */
     suspend fun swipeRelative(
-        start: PointF,
-        end: PointF,
+        start: RelativePoint,
+        end: RelativePoint,
         durationMs: Long = 350L,
         postDelayMs: Long = 400L
     ): Boolean {

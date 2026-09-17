@@ -39,13 +39,17 @@ class CoordinateProfileTest {
         assertTrue(x > 0 && x < width)
         assertTrue(y > 0 && y < height)
 
-        val roi = CoordinateProfile.toPixelRect(CoordinateProfile.STAGE_ROI_RATIO, width, height)
-        assertTrue(roi.left >= 0)
-        assertTrue(roi.right <= width)
-        assertTrue(roi.top >= 0)
-        assertTrue(roi.bottom <= height)
-        assertTrue(roi.width() > 0)
-        assertTrue(roi.height() > 0)
+        val bounds = CoordinateProfile.toPixelBounds(CoordinateProfile.STAGE_ROI_RATIO, width, height)
+        val left = bounds[0]
+        val top = bounds[1]
+        val right = bounds[2]
+        val bottom = bounds[3]
+        assertTrue(left >= 0)
+        assertTrue(right <= width)
+        assertTrue(top >= 0)
+        assertTrue(bottom <= height)
+        assertTrue(right > left)
+        assertTrue(bottom > top)
     }
 
     @Test

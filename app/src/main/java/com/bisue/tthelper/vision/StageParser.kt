@@ -1,8 +1,6 @@
 package com.bisue.tthelper.vision
 
 import android.util.Log
-import java.util.Locale
-import java.util.regex.Pattern
 
 /**
  * 게임 상단 OCR 텍스트에서 층수(Stage) 추출 및 다중 프레임 노이즈 필터링
@@ -37,7 +35,9 @@ class StageParser {
 
         // 비정상적인 수치 급등 노이즈 필터 (예: 10,000층에서 순간적으로 80,000층으로 인식되는 경우)
         if (lastValidStage > 1000 && stage > lastValidStage * 3) {
-            Log.w(TAG, "비정상적 수치 도약 감지(노이즈 추정): 이전=$lastValidStage, 감지=$stage -> 무시")
+            try {
+                Log.w(TAG, "비정상적 수치 도약 감지(노이즈 추정): 이전=$lastValidStage, 감지=$stage -> 무시")
+            } catch (e: Exception) {}
             return CheckResult(lastValidStage, false, consecutiveHits)
         }
 
@@ -45,7 +45,9 @@ class StageParser {
 
         if (stage >= targetStage) {
             consecutiveHits++
-            Log.i(TAG, "목표 층수 이상 감지: 현재=$stage, 목표=$targetStage (연속 $consecutiveHits/$requiredConsecutiveHits)")
+            try {
+                Log.i(TAG, "목표 층수 이상 감지: 현재=$stage, 목표=$targetStage (연속 $consecutiveHits/$requiredConsecutiveHits)")
+            } catch (e: Exception) {}
             if (consecutiveHits >= requiredConsecutiveHits) {
                 return CheckResult(stage, true, consecutiveHits)
             }
@@ -67,61 +69,45 @@ class StageParser {
     companion object {
         private const val TAG = "StageParser"
 
-        // "Stage 15,400" 또는 "15,400" 또는 "15.4K" 등 패턴 매칭
-        private val STAGE_REGEX = Pattern.compile(
-            """(?:stage|스테이지)?\s*([0-9oOlIsS,\.\s]+(?:\s*[kKmM])?)""",
-            Pattern.CASE_INSENSITIVE
-        )
-
         /**
-         * 원본 문자열에서 정수형 층수를 추출하는 순수 파싱 함수 (유닛 테스트 가능)
+         * 원본 문자열에서 정수형 층수를 추출하는 순수 파싱 함수
          */
         fun parseStageNumber(text: String): Int? {
             if (text.isBlank()) return null
 
-            val normalized = text.trim()
+            // 1. "Stage", "STAGE", "스테이지" 등의 접두어를 대소문자 무시하고 먼저 제거
+            val withoutPrefix = text.trim()
+                .replace(Regex("""(?i)\b(?:stage|스테이지|lv|level)\b[:\s]*"""), "")
+                .trim()
+
+            // 2. 만약 "15,400 / 15,400" 처럼 슬래시가 있으면 첫 번째 층수를 취함
+            val primaryToken = withoutPrefix.split("/").first().trim()
+
+            // 3. 숫자 부분에서 OCR 오류로 들어간 문자(O/o -> 0, I/l -> 1)만 정규화
+            val sanitizedToken = primaryToken
                 .replace("O", "0")
                 .replace("o", "0")
                 .replace("I", "1")
                 .replace("l", "1")
-                .replace("S", "5")
-                .replace("s", "5")
 
-            val matcher = STAGE_REGEX.matcher(normalized)
-            while (matcher.find()) {
-                val group = matcher.group(1)?.trim() ?: continue
-                val cleanGroup = group.replace(" ", "")
-
-                try {
-                    // K/k 단위 처리 (예: 15.4k -> 15400)
-                    if (cleanGroup.endsWith("k", ignoreCase = true)) {
-                        val numStr = cleanGroup.dropLast(1).replace(",", "")
-                        val num = numStr.toDoubleOrNull() ?: continue
-                        return (num * 1000).toInt()
-                    }
-                    // M/m 단위 처리 (예: 1.2m -> 1200000)
-                    if (cleanGroup.endsWith("m", ignoreCase = true)) {
-                        val numStr = cleanGroup.dropLast(1).replace(",", "")
-                        val num = numStr.toDoubleOrNull() ?: continue
-                        return (num * 1000000).toInt()
-                    }
-
-                    // 일반 숫자 (쉼표 제거)
-                    val rawDigits = cleanGroup.replace(",", "").replace(".", "")
-                    val parsed = rawDigits.toIntOrNull()
-                    if (parsed != null && parsed in 1..200000) {
-                        return parsed
-                    }
-                } catch (e: Exception) {
-                    // ignore parse exception and try next match
-                }
+            // 4. K/M 단위 표기 처리 (예: 15.4k, 12K, 1.2M)
+            val kMatch = Regex("""(?i)([0-9]+(?:\.[0-9]+)?)\s*k""").find(sanitizedToken)
+            if (kMatch != null) {
+                val num = kMatch.groupValues[1].toDoubleOrNull()
+                if (num != null) return (num * 1000).toInt()
             }
 
-            // 단순 숫자 시퀀스 폴백
-            val fallbackDigits = normalized.filter { it.isDigit() }
-            val fallbackInt = fallbackDigits.toIntOrNull()
-            if (fallbackInt != null && fallbackInt in 1..200000) {
-                return fallbackInt
+            val mMatch = Regex("""(?i)([0-9]+(?:\.[0-9]+)?)\s*m""").find(sanitizedToken)
+            if (mMatch != null) {
+                val num = mMatch.groupValues[1].toDoubleOrNull()
+                if (num != null) return (num * 1000000).toInt()
+            }
+
+            // 5. 일반 숫자 (콤마 제거 후 숫자만 추출)
+            val digitsOnly = sanitizedToken.replace(",", "").replace(".", "").filter { it.isDigit() }
+            val parsed = digitsOnly.toIntOrNull()
+            if (parsed != null && parsed in 1..200000) {
+                return parsed
             }
 
             return null
