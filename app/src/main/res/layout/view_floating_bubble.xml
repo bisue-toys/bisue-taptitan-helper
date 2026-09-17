@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content">
+
+    <ImageView
+        android:id="@+id/ivBubbleIcon"
+        android:layout_width="54dp"
+        android:layout_height="54dp"
+        android:background="@drawable/bg_floating_bubble"
+        android:contentDescription="TT2 Helper Bubble"
+        android:padding="12dp"
+        android:src="@drawable/ic_helper" />
+
+    <TextView
+        android:id="@+id/tvBubbleBadge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:background="#DD000000"
+        android:paddingHorizontal="4dp"
+        android:paddingVertical="1dp"
+        android:text="OFF"
+        android:textColor="#FF03DAC5"
+        android:textSize="9sp"
+        android:textStyle="bold" />
+</FrameLayout>

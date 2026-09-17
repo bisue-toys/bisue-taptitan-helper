@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">TT2 헬퍼 (TapTitan Helper)</string>
+    <string name="accessibility_service_label">TT2 헬퍼 자동 터치 및 안전 감시 서비스</string>
+    <string name="accessibility_service_desc">Tap Titans 2 게임 내 무루트 자동 터치(환생/스킬) 및 외부 앱 이탈 감지 방어에 사용됩니다.</string>
+
+    <string name="notification_channel_name">TT2 헬퍼 백그라운드 서비스</string>
+    <string name="notification_channel_desc">화면 층수 인식 및 자동화 FSM을 유지하기 위한 서비스 알림입니다.</string>
+    <string name="notification_title">TT2 헬퍼 동작 중</string>
+    <string name="notification_text">게임 층수 감시 및 자동화 루프가 활성화되어 있습니다.</string>
+</resources>
