@@ -104,15 +104,14 @@ class TtForegroundService : Service() {
 
         Log.i(TAG, "S24 Ultra 화면 규격 감지: ${screenWidth}x${screenHeight}, dpi=$densityDpi")
 
-        // 컴포넌트 초기화
-        screenCapturer = ScreenCapturer(this, mp, screenWidth, screenHeight, densityDpi)
-        ocrEngine = OcrEngine()
-        touchEngine = HumanTouchEngine(screenWidth, screenHeight)
-
-        // UI 위젯 초기화
+        // 1. UI 위젯을 최우선적으로 초기화하여 화면에 즉시 노출
         floatingBubble = FloatingBubbleView(this) {
             floatingPanel?.show()
         }
+        floatingBubble?.show()
+        Log.i(TAG, "FloatingBubble 화면 노출 완료")
+
+        touchEngine = HumanTouchEngine(screenWidth, screenHeight)
 
         floatingPanel = FloatingPanelLayout(
             context = this,
@@ -136,35 +135,42 @@ class TtForegroundService : Service() {
             }
         )
 
-        // FSM 생성 및 UI 연동
-        fsm = InfiniteCycleFsm(
-            config = config,
-            touchEngine = touchEngine!!,
-            screenCapturer = screenCapturer!!,
-            ocrEngine = ocrEngine!!,
-            onStateChanged = { state ->
-                floatingPanel?.updateState(state)
-                val badgeText = when (state) {
-                    FsmState.IDLE -> "OFF"
-                    FsmState.MONITORING_STAGE -> "RUN"
-                    FsmState.RECOVERY -> "ERR"
-                    else -> "ACT"
+        // 2. 비전 엔진 및 FSM 안전 초기화
+        try {
+            screenCapturer = ScreenCapturer(this, mp, screenWidth, screenHeight, densityDpi)
+            ocrEngine = OcrEngine()
+
+            fsm = InfiniteCycleFsm(
+                config = config,
+                touchEngine = touchEngine!!,
+                screenCapturer = screenCapturer!!,
+                ocrEngine = ocrEngine!!,
+                onStateChanged = { state ->
+                    floatingPanel?.updateState(state)
+                    val badgeText = when (state) {
+                        FsmState.IDLE -> "OFF"
+                        FsmState.MONITORING_STAGE -> "RUN"
+                        FsmState.RECOVERY -> "ERR"
+                        else -> "ACT"
+                    }
+                    floatingBubble?.updateStatusBadge(state != FsmState.IDLE, badgeText)
+                    updateNotification("상태: ${state.description}")
+                },
+                onStageDetected = { stage ->
+                    floatingPanel?.updateDetectedStage(stage)
+                    updateNotification("층수: ${String.format("%,d", stage)} / 목표: ${String.format("%,d", config.targetStage)}")
                 }
-                floatingBubble?.updateStatusBadge(state != FsmState.IDLE, badgeText)
-                updateNotification("상태: ${state.description}")
-            },
-            onStageDetected = { stage ->
-                floatingPanel?.updateDetectedStage(stage)
-                updateNotification("층수: ${String.format("%,d", stage)} / 목표: ${String.format("%,d", config.targetStage)}")
+            )
+
+            if (autoStart) {
+                Log.i(TAG, "자동 시작 플래그 확인 -> FSM 즉시 구동 (스킬 세팅: ${config.runSkillSetupOnStart})")
+                fsm?.start(config.runSkillSetupOnStart)
+                floatingBubble?.updateStatusBadge(true, "RUN")
             }
-        )
-
-        floatingBubble?.show()
-
-        if (autoStart) {
-            Log.i(TAG, "자동 시작 플래그 확인 -> FSM 즉시 구동 (스킬 세팅: ${config.runSkillSetupOnStart})")
-            fsm?.start(config.runSkillSetupOnStart)
-            floatingBubble?.updateStatusBadge(true, "RUN")
+        } catch (e: Throwable) {
+            Log.e(TAG, "비전 캡처/FSM 초기화 실패: ${e.message}", e)
+            floatingBubble?.updateStatusBadge(false, "ERR")
+            updateNotification("초기화 오류: ${e.message}")
         }
     }
 

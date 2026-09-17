@@ -25,10 +25,11 @@ class FloatingBubbleView(
     private val tvBadge: TextView = view.findViewById(R.id.tvBubbleBadge)
 
     private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop.coerceAtLeast(40)
+    private val bubbleSize = (64 * context.resources.displayMetrics.density).toInt()
 
     private val params = WindowManager.LayoutParams(
-        WindowManager.LayoutParams.WRAP_CONTENT,
-        WindowManager.LayoutParams.WRAP_CONTENT,
+        bubbleSize,
+        bubbleSize,
         WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
         WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
         PixelFormat.TRANSLUCENT
@@ -115,13 +116,23 @@ class FloatingBubbleView(
 
     fun show() {
         if (view.parent == null) {
-            windowManager.addView(view, params)
+            try {
+                windowManager.addView(view, params)
+                android.util.Log.i("FloatingBubbleView", "FloatingBubbleView 화면 추가 완료 (${bubbleSize}x${bubbleSize}px)")
+            } catch (e: Exception) {
+                android.util.Log.e("FloatingBubbleView", "FloatingBubbleView 추가 실패: ${e.message}", e)
+            }
         }
     }
 
     fun hide() {
         if (view.parent != null) {
-            windowManager.removeView(view)
+            try {
+                windowManager.removeView(view)
+                android.util.Log.i("FloatingBubbleView", "FloatingBubbleView 화면 제거 완료")
+            } catch (e: Exception) {
+                android.util.Log.e("FloatingBubbleView", "FloatingBubbleView 제거 실패: ${e.message}", e)
+            }
         }
     }
 }

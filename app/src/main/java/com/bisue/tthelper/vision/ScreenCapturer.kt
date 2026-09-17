@@ -26,7 +26,22 @@ class ScreenCapturer(
     private var virtualDisplay: VirtualDisplay? = null
 
     init {
+        registerMediaProjectionCallback()
         initVirtualDisplay()
+    }
+
+    private fun registerMediaProjectionCallback() {
+        try {
+            mediaProjection.registerCallback(object : MediaProjection.Callback() {
+                override fun onStop() {
+                    Log.i(TAG, "MediaProjection 세션 중지됨")
+                    release()
+                }
+            }, android.os.Handler(android.os.Looper.getMainLooper()))
+            Log.i(TAG, "MediaProjection.Callback 등록 완료 (Android 14+ 필수 요구사항)")
+        } catch (e: Exception) {
+            Log.e(TAG, "MediaProjection.Callback 등록 오류: ${e.message}", e)
+        }
     }
 
     private fun initVirtualDisplay() {
