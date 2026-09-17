@@ -75,42 +75,74 @@ class StageParser {
         fun parseStageNumber(text: String): Int? {
             if (text.isBlank()) return null
 
-            // 1. "Stage", "STAGE", "스테이지" 등의 접두어를 대소문자 무시하고 먼저 제거
-            val withoutPrefix = text.trim()
-                .replace(Regex("""(?i)\b(?:stage|스테이지|lv|level)\b[:\s]*"""), "")
-                .trim()
+            // 0. 숫자와 혼동된 문자(O/o -> 0, I/l -> 1) 전처리 (숫자가 포함된 토큰 내 치환)
+            val normalizedText = Regex("""\b[0-9OoIl.,]{2,}\b""").replace(text) { m ->
+                if (m.value.any { it.isDigit() }) {
+                    m.value.replace('O', '0').replace('o', '0')
+                           .replace('I', '1').replace('l', '1')
+                } else {
+                    m.value
+                }
+            }
 
-            // 2. 만약 "15,400 / 15,400" 처럼 슬래시가 있으면 첫 번째 층수를 취함
-            val primaryToken = withoutPrefix.split("/").first().trim()
+            // 1. "STAGE" 또는 "스테이지" 뒤에 바로 오는 숫자 우선 매칭
+            val directStageMatch = Regex("""(?i)\b(?:stage|스테이지|lv|level)[:\s]*([0-9OoIl.,]+(?:\s*[kKmM])?)""").find(text)
+            if (directStageMatch != null) {
+                val candidate = directStageMatch.groupValues[1].trim()
+                    .replace('O', '0').replace('o', '0')
+                    .replace('I', '1').replace('l', '1')
+                val parsed = parseSingleNumberCandidate(candidate)
+                if (parsed != null && parsed in 1..200000) {
+                    return parsed
+                }
+            }
 
-            // 3. 숫자 부분에서 OCR 오류로 들어간 문자(O/o -> 0, I/l -> 1)만 정규화
-            val sanitizedToken = primaryToken
-                .replace("O", "0")
-                .replace("o", "0")
-                .replace("I", "1")
-                .replace("l", "1")
-
-            // 4. K/M 단위 표기 처리 (예: 15.4k, 12K, 1.2M)
-            val kMatch = Regex("""(?i)([0-9]+(?:\.[0-9]+)?)\s*k""").find(sanitizedToken)
+            // 2. K/M 단위 표기 처리 (예: 15.4k, 12K, 1.2M)
+            val kMatch = Regex("""(?i)\b([0-9]+(?:\.[0-9]+)?)\s*k\b""").find(normalizedText)
             if (kMatch != null) {
                 val num = kMatch.groupValues[1].toDoubleOrNull()
                 if (num != null) return (num * 1000).toInt()
             }
 
-            val mMatch = Regex("""(?i)([0-9]+(?:\.[0-9]+)?)\s*m""").find(sanitizedToken)
+            val mMatch = Regex("""(?i)\b([0-9]+(?:\.[0-9]+)?)\s*m\b""").find(normalizedText)
             if (mMatch != null) {
                 val num = mMatch.groupValues[1].toDoubleOrNull()
                 if (num != null) return (num * 1000000).toInt()
             }
 
-            // 5. 일반 숫자 (콤마 제거 후 숫자만 추출)
-            val digitsOnly = sanitizedToken.replace(",", "").replace(".", "").filter { it.isDigit() }
-            val parsed = digitsOnly.toIntOrNull()
-            if (parsed != null && parsed in 1..200000) {
-                return parsed
+            // 3. 텍스트 내의 모든 개별 숫자 토큰 추출 (보스 타이머 0:30, 웨이브 5/5 등 분리)
+            // 슬래시 앞의 첫 번째 토큰 선별
+            val textBeforeSlash = normalizedText.split("/").first().trim()
+
+            // 콤마(,)가 포함된 천단위 숫자 또는 연속된 숫자 토큰 검색
+            val numberRegex = Regex("""\b\d{1,3}(?:,\d{3})+\b|\b\d{1,6}\b""")
+            val candidates = numberRegex.findAll(textBeforeSlash)
+                .mapNotNull { match ->
+                    val clean = match.value.replace(",", "").toIntOrNull()
+                    if (clean != null && clean in 1..200000) clean else null
+                }
+                .toList()
+
+            if (candidates.isNotEmpty()) {
+                // 상단 화면에서 층수는 보통 웨이브(5)나 초(30)보다 큰 숫자이므로 가장 큰 유효 후보 선택
+                return candidates.maxOrNull()
             }
 
             return null
+        }
+
+        private fun parseSingleNumberCandidate(token: String): Int? {
+            val cleanToken = token.trim()
+            val kMatch = Regex("""(?i)([0-9]+(?:\.[0-9]+)?)\s*k""").find(cleanToken)
+            if (kMatch != null) {
+                return kMatch.groupValues[1].toDoubleOrNull()?.let { (it * 1000).toInt() }
+            }
+            val mMatch = Regex("""(?i)([0-9]+(?:\.[0-9]+)?)\s*m""").find(cleanToken)
+            if (mMatch != null) {
+                return mMatch.groupValues[1].toDoubleOrNull()?.let { (it * 1000000).toInt() }
+            }
+            val digits = cleanToken.replace(",", "").replace(".", "").filter { it.isDigit() }
+            return digits.toIntOrNull()
         }
     }
 }

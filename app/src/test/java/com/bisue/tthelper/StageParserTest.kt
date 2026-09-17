@@ -30,6 +30,15 @@ class StageParserTest {
     }
 
     @Test
+    fun testParseStageWithWaveAndTimerNoise() {
+        // 웨이브 카운터(5/5)나 보스 타이머(0:30)가 함께 인식되어도 실제 층수만 정확히 추출
+        assertEquals(15400, StageParser.parseStageNumber("STAGE 15,400 5/5"))
+        assertEquals(15400, StageParser.parseStageNumber("Stage 15,400 0:30"))
+        assertEquals(10250, StageParser.parseStageNumber("STAGE: 10,250 (BOSS)"))
+        assertEquals(24500, StageParser.parseStageNumber("Stage 24500 10/10"))
+    }
+
+    @Test
     fun testParseStageWithKNotation() {
         assertEquals(15400, StageParser.parseStageNumber("Stage 15.4k"))
         assertEquals(12000, StageParser.parseStageNumber("12K"))
