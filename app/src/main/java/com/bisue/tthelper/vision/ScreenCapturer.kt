@@ -67,10 +67,10 @@ class ScreenCapturer(
     }
 
     /**
-     * 상단 층수 영역(ROI)만 크롭하여 비트맵으로 반환
+     * 지정된 임의의 상대 비율 사각형(ROI)을 크롭하여 비트맵으로 반환
      */
     @Synchronized
-    fun captureStageRoi(): Bitmap? {
+    fun captureRoi(roiRatio: com.bisue.tthelper.touch.RelativeRect): Bitmap? {
         val reader = imageReader ?: return null
         var image: Image? = null
         try {
@@ -89,9 +89,9 @@ class ScreenCapturer(
             )
             fullBitmap.copyPixelsFromBuffer(buffer)
 
-            // 상단 층수 표시 영역(ROI) 픽셀 사각형 계산
+            // 대상 ROI 픽셀 사각형 계산
             val roiRect = CoordinateProfile.toPixelRect(
-                CoordinateProfile.STAGE_ROI_RATIO,
+                roiRatio,
                 screenWidth,
                 screenHeight
             )
@@ -107,7 +107,7 @@ class ScreenCapturer(
                 return null
             }
 
-            // 층수 부분만 잘라낸 초경량 비트맵
+            // 요청된 부분만 잘라낸 비트맵
             val cropped = Bitmap.createBitmap(fullBitmap, safeLeft, safeTop, safeWidth, safeHeight)
             fullBitmap.recycle() // 전체 화면 메모리 즉시 해제
 
@@ -118,6 +118,14 @@ class ScreenCapturer(
         } finally {
             image?.close()
         }
+    }
+
+    /**
+     * 상단 층수 영역(ROI)만 크롭하여 비트맵으로 반환
+     */
+    fun captureStageRoi(config: com.bisue.tthelper.core.HelperConfig? = null): Bitmap? {
+        val roi = CoordinateProfile.getStageRoi(config)
+        return captureRoi(roi)
     }
 
     fun release() {

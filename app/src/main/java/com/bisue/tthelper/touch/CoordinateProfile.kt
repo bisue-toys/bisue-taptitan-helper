@@ -17,7 +17,7 @@ object CoordinateProfile {
 
     // 1. 화면 상단 층수(Stage) 표시 영역 (ROI: Region of Interest)
     // 상단 펀치홀 카메라 아래, 스테이지 텍스트가 표시되는 영역
-    val STAGE_ROI_RATIO = RelativeRect(0.20f, 0.035f, 0.80f, 0.085f)
+    val STAGE_ROI_RATIO = RelativeRect(0.18f, 0.040f, 0.82f, 0.100f)
 
     // 2. 하단 네비게이션 탭 바 (총 6개 탭 중 1번 소드마스터 탭)
     val TAB_SWORDMASTER = RelativePoint(0.08f, 0.94f)
@@ -87,5 +87,63 @@ object CoordinateProfile {
     fun toPixelRect(rect: RelativeRect, screenWidth: Int, screenHeight: Int): Rect {
         val bounds = toPixelBounds(rect, screenWidth, screenHeight)
         return Rect(bounds[0], bounds[1], bounds[2], bounds[3])
+    }
+
+    fun getStageRoi(config: com.bisue.tthelper.core.HelperConfig?): RelativeRect {
+        if (config != null && config.hasCustomCalibration) {
+            return RelativeRect(
+                config.customRoiLeft,
+                config.customRoiTop,
+                config.customRoiRight,
+                config.customRoiBottom
+            )
+        }
+        return STAGE_ROI_RATIO
+    }
+
+    fun getSwordmasterTab(config: com.bisue.tthelper.core.HelperConfig?): RelativePoint {
+        if (config != null && config.hasCustomCalibration) {
+            return RelativePoint(config.customTabSwordmasterX, config.customTabSwordmasterY)
+        }
+        return TAB_SWORDMASTER
+    }
+
+    fun getLevelupMultiplier(config: com.bisue.tthelper.core.HelperConfig?): RelativePoint {
+        if (config != null && config.hasCustomCalibration) {
+            return RelativePoint(config.customBtnMultiplierX, config.customBtnMultiplierY)
+        }
+        return BTN_LEVELUP_MULTIPLIER
+    }
+
+    fun getSwordmasterUpgrade(config: com.bisue.tthelper.core.HelperConfig?): RelativePoint {
+        if (config != null && config.hasCustomCalibration) {
+            return RelativePoint(config.customBtnUpgradeX, config.customBtnUpgradeY)
+        }
+        return BTN_SWORDMASTER_UPGRADE
+    }
+
+    fun getPrestigeButton(config: com.bisue.tthelper.core.HelperConfig?): RelativePoint {
+        if (config != null && config.hasCustomCalibration) {
+            return RelativePoint(config.customBtnPrestigeX, config.customBtnPrestigeY)
+        }
+        return BTN_PRESTIGE
+    }
+
+    fun getActiveSkillSlots(config: com.bisue.tthelper.core.HelperConfig?): List<RelativePoint> {
+        if (config != null && config.hasCustomCalibration) {
+            val startX = config.customSkillSlot1X
+            val startY = config.customSkillSlot1Y
+            val endX = config.customSkillSlot6X
+            val endY = config.customSkillSlot6Y
+
+            return (0..5).map { i ->
+                val ratio = i / 5.0f
+                RelativePoint(
+                    startX + (endX - startX) * ratio,
+                    startY + (endY - startY) * ratio
+                )
+            }
+        }
+        return ACTIVE_SKILL_SLOTS
     }
 }

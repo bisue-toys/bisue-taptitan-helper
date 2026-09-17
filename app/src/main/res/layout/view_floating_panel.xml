@@ -163,6 +163,17 @@
             android:text="환생 &amp; 전체 루프 즉시 테스트"
             android:textColor="@color/text_secondary"
             android:textSize="12sp" />
+
+        <Button
+            android:id="@+id/btnOpenCalibration"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:layout_marginTop="6dp"
+            android:background="@drawable/bg_button_outline"
+            android:text="🎯 화면 맞춤 캘리브레이션 (영역/터치)"
+            android:textColor="#00E676"
+            android:textSize="12sp"
+            android:textStyle="bold" />
     </LinearLayout>
 
 </LinearLayout>

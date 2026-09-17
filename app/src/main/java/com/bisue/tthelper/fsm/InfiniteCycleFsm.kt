@@ -141,7 +141,7 @@ class InfiniteCycleFsm(
      * 층수 캡처 및 목표 도달 검사
      */
     private suspend fun checkStageAndEvaluate() {
-        val roiBitmap = screenCapturer.captureStageRoi() ?: return
+        val roiBitmap = screenCapturer.captureStageRoi(config) ?: return
         val enhancedBitmap = ImagePreprocessor.enhanceForOcr(roiBitmap)
         val text = ocrEngine.recognizeText(enhancedBitmap)
         enhancedBitmap.recycle()
@@ -164,7 +164,7 @@ class InfiniteCycleFsm(
     }
 
     /**
-     * 탭(소드마스터) 레벨업 ➔ 스킬 1레벨 해금 ➔ 스킬 전체 활성화
+     * 앱 최초 기동 시 또는 즉시 요청 시: 탭 레벨업 -> 스킬 1렙 해금 -> 스킬 활성화 시퀀스만 단독 수행
      */
     suspend fun executeSkillSetupAndActivationOnly(force: Boolean = false) {
         if (!force && !TtAccessibilityService.isGameInForeground) {
@@ -179,13 +179,13 @@ class InfiniteCycleFsm(
         // 2단계: 탭(소드마스터) 레벨업
         // ==========================================
         currentState = FsmState.SWORDMASTER_PREPARE_MAX
-        touchEngine.tapRelative(CoordinateProfile.TAB_SWORDMASTER, postDelayMs = 600)
+        touchEngine.tapRelative(CoordinateProfile.getSwordmasterTab(config), postDelayMs = 600)
         // 레벨업 단위를 MAX 모드로 세팅 (토글 1회)
-        touchEngine.tapRelative(CoordinateProfile.BTN_LEVELUP_MULTIPLIER, postDelayMs = 400)
+        touchEngine.tapRelative(CoordinateProfile.getLevelupMultiplier(config), postDelayMs = 400)
 
         currentState = FsmState.SWORDMASTER_UPGRADE_TAP
         // 소드마스터 업그레이드 5연타 (Lv 600 이상 확보)
-        touchEngine.multiTapRelative(CoordinateProfile.BTN_SWORDMASTER_UPGRADE, times = 5, intervalMs = 150)
+        touchEngine.multiTapRelative(CoordinateProfile.getSwordmasterUpgrade(config), times = 5, intervalMs = 150)
         delay(400)
 
         // ==========================================
@@ -193,9 +193,9 @@ class InfiniteCycleFsm(
         // ==========================================
         currentState = FsmState.SKILLS_SWITCH_X1
         // 레벨업 단위를 'x1'로 복구 (토글 연속 클릭)
-        touchEngine.tapRelative(CoordinateProfile.BTN_LEVELUP_MULTIPLIER, postDelayMs = 350)
-        touchEngine.tapRelative(CoordinateProfile.BTN_LEVELUP_MULTIPLIER, postDelayMs = 350)
-        touchEngine.tapRelative(CoordinateProfile.BTN_LEVELUP_MULTIPLIER, postDelayMs = 400)
+        touchEngine.tapRelative(CoordinateProfile.getLevelupMultiplier(config), postDelayMs = 350)
+        touchEngine.tapRelative(CoordinateProfile.getLevelupMultiplier(config), postDelayMs = 350)
+        touchEngine.tapRelative(CoordinateProfile.getLevelupMultiplier(config), postDelayMs = 400)
 
         currentState = FsmState.SKILLS_UNLOCK_TOP_4
         touchEngine.tapRelative(CoordinateProfile.BTN_SKILL_1_HEAVENLY, postDelayMs = 300)
@@ -240,7 +240,7 @@ class InfiniteCycleFsm(
         // 1단계: 환생 (Prestige)
         // ==========================================
         currentState = FsmState.PRESTIGE_OPEN_TAB
-        touchEngine.tapRelative(CoordinateProfile.TAB_SWORDMASTER, postDelayMs = 600)
+        touchEngine.tapRelative(CoordinateProfile.getSwordmasterTab(config), postDelayMs = 600)
 
         currentState = FsmState.PRESTIGE_SCROLL_DOWN
         // 최하단 환생 버튼 위치로 2회 시원하게 스크롤
@@ -248,7 +248,7 @@ class InfiniteCycleFsm(
         touchEngine.swipeRelative(CoordinateProfile.SCROLL_PRESTIGE_START, CoordinateProfile.SCROLL_PRESTIGE_END, postDelayMs = 600)
 
         currentState = FsmState.PRESTIGE_CLICK_BUTTON
-        touchEngine.tapRelative(CoordinateProfile.BTN_PRESTIGE, postDelayMs = 800)
+        touchEngine.tapRelative(CoordinateProfile.getPrestigeButton(config), postDelayMs = 800)
 
         currentState = FsmState.PRESTIGE_CONFIRM_MODAL
         touchEngine.tapRelative(CoordinateProfile.BTN_CONFIRM_PRESTIGE, postDelayMs = 1000)
@@ -266,7 +266,7 @@ class InfiniteCycleFsm(
      * 전투 화면 하단 6개 스킬 슬롯 순차 터치
      */
     private suspend fun activateAllActiveSkills() {
-        for (slot in CoordinateProfile.ACTIVE_SKILL_SLOTS) {
+        for (slot in CoordinateProfile.getActiveSkillSlots(config)) {
             touchEngine.tapRelative(slot, jitterPx = 10f, postDelayMs = 250)
         }
     }

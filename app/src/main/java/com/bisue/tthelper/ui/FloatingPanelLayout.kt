@@ -24,6 +24,7 @@ class FloatingPanelLayout(
     private val onToggleAutomation: (Boolean) -> Unit,
     private val onSkillSetupClicked: () -> Unit,
     private val onManualTestClicked: () -> Unit,
+    private val onCalibrationClicked: () -> Unit,
     private val onCloseClicked: () -> Unit
 ) {
     private val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
@@ -37,6 +38,7 @@ class FloatingPanelLayout(
     private val btnToggle: Button = view.findViewById(R.id.btnToggleAutomation)
     private val btnSkillSetupNow: Button = view.findViewById(R.id.btnSkillSetupNow)
     private val btnManualTest: Button = view.findViewById(R.id.btnManualTestLoop)
+    private val btnOpenCalibration: Button = view.findViewById(R.id.btnOpenCalibration)
     private val btnClose: View = view.findViewById(R.id.btnPanelClose)
 
     private val params = WindowManager.LayoutParams(
@@ -80,6 +82,11 @@ class FloatingPanelLayout(
             saveTargetStage()
             android.widget.Toast.makeText(context, "환생 및 전체 사이클 테스트를 시작합니다.", android.widget.Toast.LENGTH_SHORT).show()
             onManualTestClicked()
+        }
+
+        btnOpenCalibration.setOnClickListener {
+            saveTargetStage()
+            onCalibrationClicked()
         }
 
         btnClose.setOnClickListener {

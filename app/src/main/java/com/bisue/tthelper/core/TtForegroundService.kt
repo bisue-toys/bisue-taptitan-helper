@@ -15,12 +15,14 @@ import android.os.IBinder
 import android.util.DisplayMetrics
 import android.util.Log
 import android.view.WindowManager
+import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import com.bisue.tthelper.MainActivity
 import com.bisue.tthelper.R
 import com.bisue.tthelper.fsm.FsmState
 import com.bisue.tthelper.fsm.InfiniteCycleFsm
 import com.bisue.tthelper.touch.HumanTouchEngine
+import com.bisue.tthelper.ui.CalibrationOverlayView
 import com.bisue.tthelper.ui.FloatingBubbleView
 import com.bisue.tthelper.ui.FloatingPanelLayout
 import com.bisue.tthelper.vision.OcrEngine
@@ -40,6 +42,7 @@ class TtForegroundService : Service() {
 
     private var floatingBubble: FloatingBubbleView? = null
     private var floatingPanel: FloatingPanelLayout? = null
+    private var calibrationOverlay: CalibrationOverlayView? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -113,6 +116,14 @@ class TtForegroundService : Service() {
 
         touchEngine = HumanTouchEngine(screenWidth, screenHeight)
 
+        // 2. 비전 엔진 초기화
+        try {
+            screenCapturer = ScreenCapturer(this, mp, screenWidth, screenHeight, densityDpi)
+            ocrEngine = OcrEngine()
+        } catch (e: Throwable) {
+            Log.e(TAG, "비전 엔진 초기화 실패: ${e.message}", e)
+        }
+
         floatingPanel = FloatingPanelLayout(
             context = this,
             config = config,
@@ -130,42 +141,68 @@ class TtForegroundService : Service() {
             onManualTestClicked = {
                 fsm?.triggerManualLoop()
             },
+            onCalibrationClicked = {
+                floatingPanel?.hide()
+                val sc = screenCapturer
+                val ocr = ocrEngine
+                val touch = touchEngine
+                if (sc != null && ocr != null && touch != null) {
+                    if (calibrationOverlay == null) {
+                        calibrationOverlay = CalibrationOverlayView(
+                            serviceContext = this,
+                            config = config,
+                            screenCapturer = sc,
+                            ocrEngine = ocr,
+                            touchEngine = touch,
+                            onSaved = {
+                                floatingPanel?.show()
+                            },
+                            onClosed = {
+                                floatingPanel?.show()
+                            }
+                        )
+                    }
+                    calibrationOverlay?.show()
+                } else {
+                    Toast.makeText(this, "비전 또는 터치 엔진이 준비되지 않았습니다.", Toast.LENGTH_SHORT).show()
+                    floatingPanel?.show()
+                }
+            },
             onCloseClicked = {
                 floatingPanel?.hide()
             }
         )
 
-        // 2. 비전 엔진 및 FSM 안전 초기화
+        // 3. FSM 안전 초기화
         try {
-            screenCapturer = ScreenCapturer(this, mp, screenWidth, screenHeight, densityDpi)
-            ocrEngine = OcrEngine()
-
-            fsm = InfiniteCycleFsm(
-                config = config,
-                touchEngine = touchEngine!!,
-                screenCapturer = screenCapturer!!,
-                ocrEngine = ocrEngine!!,
-                onStateChanged = { state ->
-                    floatingPanel?.updateState(state)
-                    val badgeText = when (state) {
-                        FsmState.IDLE -> "OFF"
-                        FsmState.MONITORING_STAGE -> "RUN"
-                        FsmState.RECOVERY -> "ERR"
-                        else -> "ACT"
+            if (screenCapturer != null && ocrEngine != null && touchEngine != null) {
+                fsm = InfiniteCycleFsm(
+                    config = config,
+                    touchEngine = touchEngine!!,
+                    screenCapturer = screenCapturer!!,
+                    ocrEngine = ocrEngine!!,
+                    onStateChanged = { state ->
+                        floatingPanel?.updateState(state)
+                        val badgeText = when (state) {
+                            FsmState.IDLE -> "OFF"
+                            FsmState.MONITORING_STAGE -> "RUN"
+                            FsmState.RECOVERY -> "ERR"
+                            else -> "ACT"
+                        }
+                        floatingBubble?.updateStatusBadge(state != FsmState.IDLE, badgeText)
+                        updateNotification("상태: ${state.description}")
+                    },
+                    onStageDetected = { stage ->
+                        floatingPanel?.updateDetectedStage(stage)
+                        updateNotification("층수: ${String.format("%,d", stage)} / 목표: ${String.format("%,d", config.targetStage)}")
                     }
-                    floatingBubble?.updateStatusBadge(state != FsmState.IDLE, badgeText)
-                    updateNotification("상태: ${state.description}")
-                },
-                onStageDetected = { stage ->
-                    floatingPanel?.updateDetectedStage(stage)
-                    updateNotification("층수: ${String.format("%,d", stage)} / 목표: ${String.format("%,d", config.targetStage)}")
-                }
-            )
+                )
 
-            if (autoStart) {
-                Log.i(TAG, "자동 시작 플래그 확인 -> FSM 즉시 구동 (스킬 세팅: ${config.runSkillSetupOnStart})")
-                fsm?.start(config.runSkillSetupOnStart)
-                floatingBubble?.updateStatusBadge(true, "RUN")
+                if (autoStart) {
+                    Log.i(TAG, "자동 시작 플래그 확인 -> FSM 즉시 구동 (스킬 세팅: ${config.runSkillSetupOnStart})")
+                    fsm?.start(config.runSkillSetupOnStart)
+                    floatingBubble?.updateStatusBadge(true, "RUN")
+                }
             }
         } catch (e: Throwable) {
             Log.e(TAG, "비전 캡처/FSM 초기화 실패: ${e.message}", e)
@@ -221,6 +258,8 @@ class TtForegroundService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         fsm?.stop()
+        calibrationOverlay?.hide()
+        calibrationOverlay = null
         floatingPanel?.hide()
         floatingBubble?.hide()
         screenCapturer?.release()
